@@ -1,0 +1,4 @@
+streamlit>=1.38
+google-genai>=1.0
+python-dotenv>=1.0
+pip-system-certs>=4.0  # trusts certs from the Windows store (needed when local AV/proxy does TLS inspection, e.g. Avast)

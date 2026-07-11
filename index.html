@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inam Medical Chat Bot</title>
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  }
+  .view {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hidden {
+    display: none !important;
+  }
+
+  /* Landing view */
+  .card {
+    text-align: center;
+    padding: 2.5rem 3rem;
+    border-radius: 12px;
+    background: #1e293b;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    max-width: 420px;
+  }
+  .card h1 {
+    font-size: 1.4rem;
+    margin: 0 0 0.5rem;
+  }
+  .card p {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  button.med-tech {
+    display: inline-block;
+    margin-top: 1.25rem;
+    padding: 0.75rem 2rem;
+    background: #2563eb;
+    color: white;
+    border: none;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+  }
+  button.med-tech:hover {
+    background: #1d4ed8;
+  }
+  code {
+    background: #0f172a;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+  }
+
+  /* Walk view */
+  #walkView {
+    position: relative;
+    flex-direction: column;
+  }
+  .credit-text {
+    position: absolute;
+    top: 18%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: clamp(1.75rem, 5vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #e2e8f0;
+    opacity: 0.5;
+    padding: 0 1rem;
+  }
+  .scene {
+    position: relative;
+    width: 90%;
+    max-width: 900px;
+    height: 160px;
+    border-bottom: 3px solid #334155;
+  }
+  .walker {
+    position: absolute;
+    bottom: 8px;
+    left: -8%;
+    font-size: 3.5rem;
+    animation: walk 3.5s ease-in-out forwards;
+  }
+  .walker-sprite {
+    display: inline-block;
+    /* Base emoji art faces left; flip so the figure faces the direction
+       of travel (rightward, toward the hospital) instead of walking
+       backwards. */
+    transform: scaleX(-1);
+    animation: bob 0.5s ease-in-out infinite;
+  }
+  .hospital {
+    position: absolute;
+    bottom: 0;
+    right: 4%;
+    font-size: 4.5rem;
+  }
+  @keyframes walk {
+    0%   { left: -8%; }
+    95%  { left: 82%; }
+    100% { left: 84%; }
+  }
+  @keyframes bob {
+    0%, 100% { transform: scaleX(-1) translateY(0); }
+    50%      { transform: scaleX(-1) translateY(-6px); }
+  }
+
+  /* Welcome view */
+  #welcomeView {
+    position: relative;
+    overflow: hidden;
+    flex-direction: column;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 55%, #dbeafe 100%);
+  }
+  #welcomeView::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(125, 175, 209, 0.22) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(125, 175, 209, 0.22) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+  }
+  .welcome-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .doctor-emoji {
+    font-size: clamp(3rem, 8vw, 5.5rem);
+    margin-bottom: 0.25rem;
+    animation: doctorBounce 1.8s ease-in-out infinite;
+  }
+  @keyframes doctorBounce {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50%      { transform: translateY(-10px) rotate(3deg); }
+  }
+  .welcome-text {
+    font-size: clamp(2rem, 6vw, 4rem);
+    font-weight: 800;
+    text-align: center;
+    padding: 0 1rem;
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399, #38bdf8);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation:
+      popIn 0.6s cubic-bezier(.34, 1.56, .64, 1) both,
+      floatText 2.2s ease-in-out 0.6s infinite,
+      shimmer 3s linear infinite;
+  }
+  @keyframes popIn {
+    0%   { transform: scale(0.3); opacity: 0; }
+    70%  { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes floatText {
+    0%, 100% { translate: 0 0; }
+    50%      { translate: 0 -10px; }
+  }
+  @keyframes shimmer {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+  }
+  .confetti-piece {
+    position: absolute;
+    bottom: -8%;
+    font-size: 1.9rem;
+    opacity: 0;
+    animation: rise 2.6s ease-in forwards;
+  }
+  @keyframes rise {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+    12%  { opacity: 1; }
+    100% { transform: translateY(-480px) rotate(360deg); opacity: 0; }
+  }
+  .loading-hint {
+    position: absolute;
+    bottom: 12%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #475569;
+    font-size: 1rem;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1; }
+  }
+
+  /* App frame: preloaded hidden behind the animation, revealed once both
+     the animation and the real app load are done. Kept in normal render
+     (not display:none) the whole time so the page keeps loading/connecting
+     underneath the animation instead of only starting once revealed. */
+  .app-frame {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .app-frame.ready {
+    opacity: 1;
+    pointer-events: auto;
+  }
+</style>
+</head>
+<body>
+
+  <div id="landingView" class="view">
+    <div class="card">
+      <h1>🩺 Inam Medical Chat Bot</h1>
+      <p>Press the button below to continue to the chatbot.</p>
+      <button class="med-tech" id="medTechBtn">MED TECH</button>
+    </div>
+  </div>
+
+  <div id="walkView" class="view hidden">
+    <div class="credit-text">Chatbot made by Inam Kunwar</div>
+    <div class="scene">
+      <div class="walker"><span class="walker-sprite">🚶</span></div>
+      <div class="hospital">🏥</div>
+    </div>
+  </div>
+
+  <div id="welcomeView" class="view hidden">
+    <div class="welcome-content">
+      <div class="doctor-emoji">🧑‍⚕️</div>
+      <div class="welcome-text">Welcome to Inam Medical Chat Bot</div>
+    </div>
+    <div id="loadingHint" class="loading-hint hidden">Preparing your session…</div>
+  </div>
+
+  <iframe id="appFrame" class="app-frame" src="about:blank" title="Inam Medical Chat Bot"></iframe>
+
+  <script>
+    var medTechBtn = document.getElementById('medTechBtn');
+    var landingView = document.getElementById('landingView');
+    var walkView = document.getElementById('walkView');
+    var welcomeView = document.getElementById('welcomeView');
+    var loadingHint = document.getElementById('loadingHint');
+    var appFrame = document.getElementById('appFrame');
+
+    var APP_URL = 'http://localhost:8501';
+    var WALK_MS = 3600;
+    var WELCOME_MS = 2400;
+
+    var animationDone = false;
+    var appLoaded = false;
+
+    var CONFETTI = ['🎉', '✨', '💙', '🩺', '🎊', '💚', '⭐'];
+
+    function spawnConfetti() {
+      for (var i = 0; i < 14; i++) {
+        var piece = document.createElement('span');
+        piece.className = 'confetti-piece';
+        piece.textContent = CONFETTI[i % CONFETTI.length];
+        piece.style.left = (5 + Math.random() * 90) + '%';
+        piece.style.animationDelay = (Math.random() * 0.8) + 's';
+        welcomeView.appendChild(piece);
+      }
+    }
+
+    function tryReveal() {
+      if (!animationDone || !appLoaded) return;
+      landingView.classList.add('hidden');
+      walkView.classList.add('hidden');
+      welcomeView.classList.add('hidden');
+      appFrame.classList.add('ready');
+    }
+
+    // The iframe's own "load" event is not a reliable readiness signal: it
+    // fires even when the navigation failed (e.g. connection refused, server
+    // not started yet), which would falsely reveal a broken/blank frame. Poll
+    // the server directly instead — a no-cors fetch resolves only when
+    // something actually answers on that port, and rejects on connection
+    // failure, so it distinguishes "up" from "down" correctly.
+    function probeServer() {
+      fetch(APP_URL, { mode: 'no-cors', cache: 'no-store' })
+        .then(function () {
+          appLoaded = true;
+          tryReveal();
+        })
+        .catch(function () {
+          if (!appLoaded) {
+            setTimeout(probeServer, 500);
+          }
+        });
+    }
+
+    medTechBtn.addEventListener('click', function () {
+      landingView.classList.add('hidden');
+      walkView.classList.remove('hidden');
+
+      // Start loading the real app immediately, hidden behind the animation,
+      // and independently probe until it actually answers.
+      appFrame.src = APP_URL;
+      probeServer();
+
+      // Walk phase (matches the CSS "walk" animation duration).
+      setTimeout(function () {
+        walkView.classList.add('hidden');
+        welcomeView.classList.remove('hidden');
+        spawnConfetti();
+      }, WALK_MS);
+
+      // End of the welcome phase: reveal the app if it's ready, otherwise
+      // keep the welcome screen up with a loading hint until it is.
+      setTimeout(function () {
+        animationDone = true;
+        if (!appLoaded) {
+          loadingHint.classList.remove('hidden');
+        }
+        tryReveal();
+      }, WALK_MS + WELCOME_MS);
+    });
+  </script>
+
+</body>
+</html>
