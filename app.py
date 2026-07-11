@@ -32,15 +32,24 @@ CONFETTI_EMOJI = ["\U0001F389", "✨", "\U0001F499", "\U0001FA7A", "\U0001F38A",
 def _intro_container_css(background):
     return f"""
     <style>
-      [data-testid="stAppViewContainer"] {{ background: {background}; }}
-      [data-testid="stHeader"] {{ background: transparent; }}
+      [data-testid="stHeader"] {{ display: none; }}
+      [data-testid="stToolbar"] {{ display: none; }}
+      [data-testid="stStatusWidget"] {{ display: none; }}
+      [data-testid="stDecoration"] {{ display: none; }}
+      [data-testid="stAppViewContainer"] {{ background: {background}; padding: 0; }}
       [data-testid="stMainBlockContainer"] {{
-        min-height: 100vh; display: flex; flex-direction: column;
+        min-height: 100vh; padding: 0 !important; margin: 0 !important; max-width: 100% !important;
+        display: flex; flex-direction: column;
         align-items: center; justify-content: center; position: relative; overflow: hidden;
       }}
+      [data-testid="stVerticalBlock"] {{
+        align-items: center !important; justify-content: center !important; height: 100%;
+      }}
+      html, body {{ overflow: hidden; }}
       .intro-card {{
         text-align: center; padding: 2.5rem 3rem; border-radius: 12px;
-        background: #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.35); max-width: 420px;
+        background: #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        max-width: 420px; margin: 0 auto;
       }}
       .intro-card h1 {{ font-size: 1.4rem; margin: 0 0 0.5rem; color: #e2e8f0; }}
       .intro-card p {{ color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }}
@@ -52,20 +61,22 @@ def _intro_container_css(background):
       .intro-credit {{
         text-align: center; font-size: clamp(1.5rem, 4vw, 2.5rem); font-weight: 800;
         letter-spacing: 0.02em; color: #e2e8f0; opacity: 0.5; padding: 0 1rem 1.5rem;
+        max-width: 900px; margin: 0 auto;
       }}
       .intro-scene {{
         position: relative; width: 90%; max-width: 900px; height: 160px;
-        border-bottom: 3px solid #334155;
+        border-bottom: 3px solid #334155; margin: 0 auto;
       }}
       .intro-walker {{ position: absolute; bottom: 8px; left: -8%; font-size: 3.5rem; animation: intro-walk 3.5s ease-in-out forwards; }}
       .intro-walker-sprite {{ display: inline-block; transform: scaleX(-1); animation: intro-bob 0.5s ease-in-out infinite; }}
       .intro-hospital {{ position: absolute; bottom: 0; right: 4%; font-size: 4.5rem; }}
       @keyframes intro-walk {{ 0% {{ left: -8%; }} 95% {{ left: 82%; }} 100% {{ left: 84%; }} }}
       @keyframes intro-bob {{ 0%, 100% {{ transform: scaleX(-1) translateY(0); }} 50% {{ transform: scaleX(-1) translateY(-6px); }} }}
-      .intro-doctor {{ font-size: clamp(3rem, 8vw, 5.5rem); margin-bottom: 0.25rem; animation: intro-doctor-bounce 1.8s ease-in-out infinite; }}
+      .intro-doctor {{ font-size: clamp(3rem, 8vw, 5.5rem); text-align: center; margin-bottom: 0.25rem; animation: intro-doctor-bounce 1.8s ease-in-out infinite; }}
       @keyframes intro-doctor-bounce {{ 0%, 100% {{ transform: translateY(0) rotate(-3deg); }} 50% {{ transform: translateY(-10px) rotate(3deg); }} }}
       .intro-welcome-text {{
         font-size: clamp(2rem, 6vw, 4rem); font-weight: 800; text-align: center; padding: 0 1rem;
+        max-width: 900px; margin: 0 auto;
         background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399, #38bdf8);
         background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
         animation: intro-pop-in 0.6s cubic-bezier(.34, 1.56, .64, 1) both,
