@@ -1,4 +1,6 @@
 import os
+import random
+import time
 
 import streamlit as st
 from google import genai
@@ -11,6 +13,165 @@ from config import MODEL_ID, MAX_TOKENS
 
 load_dotenv()
 st.set_page_config(page_title="Inam Medical Chat Bot", page_icon="\U0001FA7A")
+
+# Intro splash (landing card -> walk animation -> welcome animation), ported
+# from index.html's JS-timer version to Streamlit session-state + time.sleep
+# staging, since a deployed app has no separate localhost server to iframe
+# into and st.components.v1.html can't cover the full page. Plays once per
+# browser session; skipped entirely once "done".
+WALK_SECONDS = 3.6
+WELCOME_SECONDS = 2.4
+CONFETTI_EMOJI = ["\U0001F389", "✨", "\U0001F499", "\U0001FA7A", "\U0001F38A", "\U0001F49A", "⭐"]
+
+# The intro is rendered in Streamlit's own normal element flow (not a
+# position:fixed overlay div) — an earlier version used a fixed full-page div
+# for the visual "card", which visually looked right but sat in front of the
+# real st.button in stacking order and silently swallowed all clicks. Instead,
+# style Streamlit's actual containers (stAppViewContainer / stMainBlockContainer)
+# so the intro content and the real button share one flow and one click target.
+def _intro_container_css(background):
+    return f"""
+    <style>
+      [data-testid="stAppViewContainer"] {{ background: {background}; }}
+      [data-testid="stHeader"] {{ background: transparent; }}
+      [data-testid="stMainBlockContainer"] {{
+        min-height: 100vh; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; position: relative; overflow: hidden;
+      }}
+      .intro-card {{
+        text-align: center; padding: 2.5rem 3rem; border-radius: 12px;
+        background: #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.35); max-width: 420px;
+      }}
+      .intro-card h1 {{ font-size: 1.4rem; margin: 0 0 0.5rem; color: #e2e8f0; }}
+      .intro-card p {{ color: #94a3b8; font-size: 0.95rem; line-height: 1.5; }}
+      div[data-testid="stButton"] button {{
+        padding: 0.75rem 2rem; background: #2563eb; color: white; border: none;
+        border-radius: 8px; font-weight: 700; font-size: 1.1rem; letter-spacing: 0.03em;
+      }}
+      div[data-testid="stButton"] button:hover {{ background: #1d4ed8; color: white; }}
+      .intro-credit {{
+        text-align: center; font-size: clamp(1.5rem, 4vw, 2.5rem); font-weight: 800;
+        letter-spacing: 0.02em; color: #e2e8f0; opacity: 0.5; padding: 0 1rem 1.5rem;
+      }}
+      .intro-scene {{
+        position: relative; width: 90%; max-width: 900px; height: 160px;
+        border-bottom: 3px solid #334155;
+      }}
+      .intro-walker {{ position: absolute; bottom: 8px; left: -8%; font-size: 3.5rem; animation: intro-walk 3.5s ease-in-out forwards; }}
+      .intro-walker-sprite {{ display: inline-block; transform: scaleX(-1); animation: intro-bob 0.5s ease-in-out infinite; }}
+      .intro-hospital {{ position: absolute; bottom: 0; right: 4%; font-size: 4.5rem; }}
+      @keyframes intro-walk {{ 0% {{ left: -8%; }} 95% {{ left: 82%; }} 100% {{ left: 84%; }} }}
+      @keyframes intro-bob {{ 0%, 100% {{ transform: scaleX(-1) translateY(0); }} 50% {{ transform: scaleX(-1) translateY(-6px); }} }}
+      .intro-doctor {{ font-size: clamp(3rem, 8vw, 5.5rem); margin-bottom: 0.25rem; animation: intro-doctor-bounce 1.8s ease-in-out infinite; }}
+      @keyframes intro-doctor-bounce {{ 0%, 100% {{ transform: translateY(0) rotate(-3deg); }} 50% {{ transform: translateY(-10px) rotate(3deg); }} }}
+      .intro-welcome-text {{
+        font-size: clamp(2rem, 6vw, 4rem); font-weight: 800; text-align: center; padding: 0 1rem;
+        background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399, #38bdf8);
+        background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+        animation: intro-pop-in 0.6s cubic-bezier(.34, 1.56, .64, 1) both,
+                   intro-float-text 2.2s ease-in-out 0.6s infinite,
+                   intro-shimmer 3s linear infinite;
+      }}
+      @keyframes intro-pop-in {{ 0% {{ transform: scale(0.3); opacity: 0; }} 70% {{ transform: scale(1.12); opacity: 1; }} 100% {{ transform: scale(1); opacity: 1; }} }}
+      @keyframes intro-float-text {{ 0%, 100% {{ translate: 0 0; }} 50% {{ translate: 0 -10px; }} }}
+      @keyframes intro-shimmer {{ 0% {{ background-position: 0% 50%; }} 100% {{ background-position: 300% 50%; }} }}
+      .intro-confetti-piece {{ position: absolute; bottom: -8%; font-size: 1.9rem; opacity: 0; animation: intro-rise 2.6s ease-in forwards; }}
+      @keyframes intro-rise {{ 0% {{ transform: translateY(0) rotate(0deg); opacity: 0; }} 12% {{ opacity: 1; }} 100% {{ transform: translateY(-480px) rotate(360deg); opacity: 0; }} }}
+    </style>
+    """
+
+
+def _render_confetti():
+    pieces = ""
+    for i in range(14):
+        emoji = CONFETTI_EMOJI[i % len(CONFETTI_EMOJI)]
+        left = random.uniform(5, 95)
+        delay = random.uniform(0, 0.8)
+        pieces += (
+            f'<span class="intro-confetti-piece" '
+            f'style="left:{left:.1f}%; animation-delay:{delay:.2f}s;">{emoji}</span>'
+        )
+    return pieces
+
+
+if "intro_stage" not in st.session_state:
+    st.session_state.intro_stage = "landing"
+
+if st.session_state.intro_stage != "done":
+    # Streamlit only prunes a widget that an earlier *completed* run produced
+    # once the current run itself finishes — so a widget key simply dropped
+    # mid-run (e.g. no longer calling st.button once we leave the landing
+    # stage) stays visible on screen for as long as this run keeps going,
+    # which is the entire multi-second sleep() below. Re-emitting st.button
+    # with the *same* key on every stage (just hidden via CSS once we're past
+    # landing) keeps it a live, continuously-updated element instead, so nothing
+    # is ever "dropped" for Streamlit to defer cleaning up. It can only be
+    # called once per run (a duplicate key in the same run is an error), so it's
+    # rendered a single time per run, outside the walk/welcome content swap.
+    intro_slot = st.empty()
+    button_slot = st.empty()
+
+    def _render_med_tech_button(show):
+        with button_slot.container():
+            st.markdown(
+                f'<style>div[data-testid="stButton"] {{ display: {"revert" if show else "none"}; }}</style>',
+                unsafe_allow_html=True,
+            )
+            _, center, _ = st.columns([1, 1, 1])
+            with center:
+                return st.button("MED TECH", key="med_tech_btn")
+
+    if st.session_state.intro_stage == "landing":
+        st.markdown(_intro_container_css("#0f172a"), unsafe_allow_html=True)
+        with intro_slot.container():
+            st.markdown(
+                '<div class="intro-card">'
+                "<h1>\U0001FA7A Inam Medical Chat Bot</h1>"
+                "<p>Press the button below to continue to the chatbot.</p>"
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        if _render_med_tech_button(show=True):
+            st.session_state.intro_stage = "walk"
+            st.rerun()
+
+    else:
+        # Walk and welcome run back-to-back within a single script execution
+        # (no st.rerun() between them).
+        st.markdown(_intro_container_css("#0f172a"), unsafe_allow_html=True)
+        with intro_slot.container():
+            st.markdown(
+                '<div class="intro-credit">Chatbot made by Inam Kunwar</div>'
+                '<div class="intro-scene">'
+                '<div class="intro-walker"><span class="intro-walker-sprite">\U0001F6B6</span></div>'
+                '<div class="intro-hospital">\U0001F3E5</div>'
+                "</div>",
+                unsafe_allow_html=True,
+            )
+        _render_med_tech_button(show=False)
+        time.sleep(WALK_SECONDS)
+
+        st.markdown(
+            _intro_container_css(
+                "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 55%, #dbeafe 100%)"
+            ),
+            unsafe_allow_html=True,
+        )
+        with intro_slot.container():
+            st.markdown(
+                '<div class="intro-doctor">\U0001F9D1‍⚕️</div>'
+                '<div class="intro-welcome-text">Welcome to Inam Medical Chat Bot</div>'
+                + _render_confetti(),
+                unsafe_allow_html=True,
+            )
+        time.sleep(WELCOME_SECONDS)
+
+        intro_slot.empty()
+        button_slot.empty()
+        st.session_state.intro_stage = "done"
+        st.rerun()
+
+    st.stop()
 
 api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
 if not api_key:
