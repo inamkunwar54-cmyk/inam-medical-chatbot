@@ -282,7 +282,7 @@ if user_text:
             )
 
         except errors.ClientError as e:
-            if e.code == 401:
+            if e.code == 401 or (e.code == 400 and "api key not valid" in (e.message or "").lower()):
                 st.error("Invalid API key. Check your GEMINI_API_KEY value.")
             elif e.code == 429:
                 st.error("Rate limited by the Gemini API — please wait and try again.")
